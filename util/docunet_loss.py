@@ -1,8 +1,9 @@
 import tensorflow as tf
+from tensorflow.python.ops.losses import losses_impl
 
 class DocunetLoss(tf.keras.losses.CategoricalCrossentropy):
-    def __init__(self, lamda=0.1):
-        super(DocunetLoss, self).__init__()
+    def __init__(self, lamda=0.1, reduction=losses_impl.ReductionV2.NONE):
+        super(DocunetLoss, self).__init__(reduction=reduction)
         self.lamda = lamda
 
     def call(self, target, output):
@@ -30,5 +31,6 @@ class DocunetLoss(tf.keras.losses.CategoricalCrossentropy):
         loss_term_3 = tf.math.reduce_sum(tf.math.add(loss_term_3_x, loss_term_3_y) * back_sign) / tf.math.reduce_sum(back_sign)
 
         loss = loss_term_1 - self.lamda * loss_term_2 + loss_term_3
+        loss = losses_impl._safe_mean(loss, target.numpy().shape[0])
 
         return loss

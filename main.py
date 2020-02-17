@@ -26,6 +26,7 @@ def main():
     if not args.trainval:
         trainer.run_epoch(trainer.args.epochs, split=TEST)
 
+    trainer.run_epoch(trainer.args.epochs, split=VISUALIZATION)
     trainer.summary.add_scalar('test/best_result', trainer.best_loss, args.epochs)
     trainer.summary.close_writer()
     trainer.save_network()
