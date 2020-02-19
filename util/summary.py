@@ -5,7 +5,7 @@ import glob
 import matplotlib.pyplot as plt
 
 from constants import *
-from util.general_functions import get_flat_images
+from util.general_functions import get_flat_images, tensor2im
 
 class TensorboardSummary(object):
     """
@@ -43,6 +43,7 @@ class TensorboardSummary(object):
         checkname += args.model
         checkname += '_sc' if args.separable_conv else ''
         checkname += '-refined' if args.refine_network else ''
+        checkname += '-graph' if args.execute_graph else ''
 
         if 'deeplab' in args.model:
             checkname += '-os_' + str(args.output_stride)
@@ -103,8 +104,8 @@ class TensorboardSummary(object):
         step = self.get_step(split)
 
         outputs, targets = get_flat_images(self.args.dataset, images, outputs, targets)
-        outputs = outputs[:, : int(self.args.resize[0] /2), : int(self.args.resize[0] /2), :]
-        targets = targets[:, : int(self.args.resize[0] /2), : int(self.args.resize[0] /2), :]
+        outputs = tf.stack([tensor2im(output) for output in outputs[:, : int(self.args.resize[0] /2), : int(self.args.resize[0] /2), :]])
+        targets = tf.stack([tensor2im(target) for target in targets[:, : int(self.args.resize[0] /2), : int(self.args.resize[0] /2), :]])
 
         with self.writer.as_default(), tf.contrib.summary.always_record_summaries():
             tf.contrib.summary.image(split + '/ZZ Image', self.image_grid(images), step=step)

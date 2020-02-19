@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import matplotlib.pyplot as plt
 
 from core.models.unet import UNet
 from core.models.deeplabv3_plus import Deeplabv3_plus
@@ -254,6 +255,13 @@ def get_flat_images(dataset, images, outputs, targets):
 
     return outputs, targets
 
+def tensor2im(input_image):
+    if input_image.numpy().ndim == 3:
+        input_image = (input_image - tf.reduce_min(input_image)) / (tf.reduce_max(input_image) - tf.reduce_min(input_image))
+    input_image = (input_image + 1) / 2.0
+
+    return input_image
+
 def print_training_info(args):
     """
     Prints training parameters to output.
@@ -264,6 +272,7 @@ def print_training_info(args):
     """
     print('Dataset', args.dataset)
     print('Refine network', args.refine_network)
+    print('Graph execution', args.execute_graph)
 
     if 'unet' in args.model:
         print('Ngf', args.ngf)
@@ -274,7 +283,7 @@ def print_training_info(args):
         print('Output stride', args.output_stride)
         print('Learned upsampling', args.learned_upsampling)
         print('Pretrained', args.pretrained)
-        print('Use aspp', args.use_assp)
+        print('Use aspp', args.use_aspp)
 
     print('Separable conv', args.separable_conv)
     print('Optimizer', args.optim)

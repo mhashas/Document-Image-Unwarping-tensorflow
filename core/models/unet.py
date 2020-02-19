@@ -26,7 +26,7 @@ class UNetDownBlock(tf.keras.layers.Layer):
         kernel_size = 3 if self.use_maxpool else 4
 
         self.conv = tf.keras.layers.Conv2D(out_channels, kernel_size=kernel_size, strides=strides, padding='same', use_bias=bias, kernel_initializer=init_type)
-        self.relu = tf.keras.layers.ReLU()
+        self.relu = tf.keras.layers.LeakyReLU(0.2)
         self.norm = tf.keras.layers.BatchNormalization()
         self.maxpool = tf.keras.layers.MaxPool2D()
         self.dropout = tf.keras.layers.SpatialDropout2D(rate=dropout_rate)
