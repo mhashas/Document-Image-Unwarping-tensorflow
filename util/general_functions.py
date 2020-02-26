@@ -243,8 +243,8 @@ def get_flat_images(dataset, images, outputs, targets):
 
     Returns:
         tf.Tensor, tf.Tensor: flattened images
-
     """
+
     if dataset == DOCUNET:
         pass
     elif dataset == DOCUNET_INVERTED:
@@ -256,6 +256,16 @@ def get_flat_images(dataset, images, outputs, targets):
     return outputs, targets
 
 def tensor2im(input_image):
+    """
+    Post processing tensor image
+
+    Args:
+        input_image (tf.Tensor): tensor input image
+
+    Returns:
+        tf.Tensor: tensor output image
+    """
+
     if input_image.numpy().ndim == 3:
         input_image = (input_image - tf.reduce_min(input_image)) / (tf.reduce_max(input_image) - tf.reduce_min(input_image))
     input_image = (input_image + 1) / 2.0
@@ -268,8 +278,9 @@ def print_training_info(args):
 
     Args:
         args (argparse): command line arguments
-
     """
+
+    print("Built ", args.model)
     print('Dataset', args.dataset)
     print('Refine network', args.refine_network)
     print('Graph execution', args.execute_graph)

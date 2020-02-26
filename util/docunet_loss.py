@@ -2,11 +2,32 @@ import tensorflow as tf
 from tensorflow.python.ops.losses import losses_impl
 
 class DocunetLoss(tf.keras.losses.CategoricalCrossentropy):
+    """Implementation of the DocUnet loss functions as presented in http://openaccess.thecvf.com/content_cvpr_2018/papers/Ma_DocUNet_Document_Image_CVPR_2018_paper.pdf"""
+
     def __init__(self, lamda=0.1, reduction=losses_impl.ReductionV2.NONE):
+        """
+        Initialize the loss function
+
+        Args:
+            lamda (float): coefficient of second loss term
+            reduction (object): type of reduction, set to none as we perform it manually
+        """
+
         super(DocunetLoss, self).__init__(reduction=reduction)
         self.lamda = lamda
 
     def call(self, target, output):
+        """
+        Computes the loss between the target and provided output
+
+        Args:
+            target (tf.Tensor): y_true, the target tensor
+            output (tf.Tensor): y_pred, the predicted tensor
+
+        Returns:
+            tf.Tensor: loss
+        """
+
         x = target[:, :, :, 0]
         y = target[:, :, :, 1]
         back_sign_x, back_sign_y = tf.cast(tf.math.equal(x, -1 * tf.ones(x.numpy().shape)), tf.float32), tf.cast(tf.math.equal(y, -1 * tf.ones(y.numpy().shape)), tf.float32)

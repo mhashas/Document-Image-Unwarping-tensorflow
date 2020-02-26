@@ -54,6 +54,7 @@ class TensorboardSummary(object):
         if 'unet' in args.model:
             checkname += '-downs_' + str(args.num_downs) + '-ngf_' + str(args.ngf) + '-type_' + str(args.down_type)
 
+        checkname += '-batch_' + str(args.batch_size)
         checkname += '-loss_' + args.loss_type
         checkname += '-sloss_' if args.second_loss else ''
 
@@ -161,17 +162,38 @@ class TensorboardSummary(object):
         return images
 
     def save_network(self, model):
+        """
+        Save model to disk
+
+        Args:
+            model (tf.keras.Model): model to be saved
+        """
+
         path = self.experiment_dir[self.experiment_dir.find(self.args.results_dir):].replace(self.args.results_dir, self.args.save_dir)
         if not os.path.isdir(path):
             os.makedirs(path)
 
         model.save_weights(path + '/network.hdf5')
+        #root = tf.train.Checkpoint(model=model)
+        #root.save(os.path.join(path, 'ckpt'))
 
     def load_network(self, model):
-        path = self.args.pretrained_models_dir
-        model.load(path)
+        """
 
+        Args:
+            model:
+
+        Returns:
+
+        """
+        model.build((1, self.args.resize[0], self.args.resize[1], 3))
+        path = self.args.pretrained_models_dir
+
+        #root = tf.train.Checkpoint(model=model)
+        #root.restore(tf.train.latest_checkpoint(path))
+        model.load_weights(path + '.hdf5')
         return model
 
     def close_writer(self):
+        """Closes the sumary writer"""
         self.writer.close()

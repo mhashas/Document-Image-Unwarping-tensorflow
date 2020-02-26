@@ -2,6 +2,7 @@ import tensorflow as tf
 import copy
 from tqdm import tqdm
 import math
+import time
 
 from util.general_functions import make_data_loader, get_model, get_loss, get_optimizer
 from util.summary import TensorboardSummary
@@ -24,8 +25,12 @@ class Trainer(object):
         self.summary = TensorboardSummary(args)
         self.model = get_model(args)
 
+        if self.args.inference:
+            self.model = self.summary.load_network(self.model)
+
         if args.save_best_model:
             self.best_model = copy.deepcopy(self.model)
+
 
         if self.args.trainval:
             self.train_loader, self.test_loader = make_data_loader(args, TRAINVAL), make_data_loader(args, TEST)
@@ -41,6 +46,16 @@ class Trainer(object):
             self.model.call = tf.contrib.eager.defun(self.model.call)
 
     def apply_gradients(self, optimizer : tf.train.Optimizer, gradients, variables, global_step):
+        """
+        Applies the gradients to the optimizer. This function exists so that tensorflow can define it as a graph function using tf.contrib.eager.defun
+
+        Args:
+            optimizer (tf.train.Optimizer): optimizer
+            gradients:
+            variables:
+            global_step:
+        """
+
         optimizer.apply_gradients(zip(gradients, variables), global_step=global_step)
 
     def run_epoch(self, epoch, split=TRAIN):
@@ -94,5 +109,39 @@ class Trainer(object):
         self.summary.add_scalar(split + '/total_loss_epoch', total_loss, epoch)
         print('\n=>Epoches %i, learning rate = %.4f, \previous best = %.4f' % (epoch, self.args.lr, self.best_loss))
 
+    def calculate_inference_speed(self, iterations):
+        """
+        Performs several forward passes through the network to compute the inference speed
+
+        Args:
+            iterations (int): number of forward passes
+
+        Returns:
+            int: mean inference speed
+        """
+
+        loader = self.test_loader
+        bar = tqdm(loader)
+        times = []
+
+        for i, sample in enumerate(bar):
+            image = sample[0]
+
+            start = time.time()
+            output = self.model(image)
+            end = time.time()
+            current_time = end - start
+
+            if i > 0:
+                print(current_time)
+                times.append(current_time)
+
+            if i>= iterations:
+                break
+
+        return sum(times) / len(times)
+
     def save_network(self):
+        """Saves current model"""
+
         self.summary.save_network(self.model)

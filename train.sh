@@ -6,5 +6,4 @@ RESIZE=$5
 REFINE_NETWORK=${6:-0}
 
 python main.py --model $MODEL --dataset $DATASET --loss_type $LOSS_TYPE --batch_size $BATCH_SIZE \
-               --resize $RESIZE --epochs 100 --norm_layer batch --debug 0 \
-               --refine_network $REFINE_NETWORK
+               --resize $RESIZE --epochs 100 --norm_layer batch --debug 0 --refine_network $REFINE_NETWORK

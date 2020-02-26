@@ -54,6 +54,7 @@ class ASPP(tf.keras.layers.Layer):
         super(ASPP, self).__init__()
 
         avg_pool_kernel = tuple(np.array(input_shape) / 16)
+
         if output_stride == 16:
             dilations = [1, 6 , 12, 18]
         elif output_stride == 8:
@@ -70,6 +71,9 @@ class ASPP(tf.keras.layers.Layer):
                                                     tf.keras.layers.Conv2D(256, 1, use_bias=False),
                                                     tf.keras.layers.BatchNormalization(),
                                                     tf.keras.layers.ReLU()])
+
+        self.upsampling = tf.keras.layers.UpSampling2D(avg_pool_kernel, interpolation='bilinear')
+
 
         self.conv = tf.keras.layers.Conv2D(256, 1, use_bias=False)
         self.norm = tf.keras.layers.BatchNormalization()
@@ -93,7 +97,7 @@ class ASPP(tf.keras.layers.Layer):
         x3 = self.assp3(x, training=training)
         x4 = self.assp4(x, training=training)
         x5 = self.global_avg_pool(x, training=training)
-        x5 = tf.keras.layers.UpSampling2D(tuple(np.array(x4.numpy().shape[1:3]) / np.array(x5.numpy().shape[1:3])), interpolation='bilinear').call(x5)
+        x5 = self.upsampling(x5)
 
         x = tf.concat([x1, x2, x3, x4, x5], axis=3)
         x = self.conv(x)
@@ -117,6 +121,7 @@ class Decoder(tf.keras.layers.Layer):
         self.conv = tf.keras.layers.Conv2D(48, 1, use_bias=False)
         self.norm = tf.keras.layers.BatchNormalization()
         self.relu = tf.keras.layers.ReLU()
+        self.upsampling = tf.keras.layers.UpSampling2D((4,4), interpolation='bilinear')
 
         self.last_conv = tf.keras.Sequential([tf.keras.layers.Conv2D(256, 3, padding="same", use_bias=False),
                                               tf.keras.layers.BatchNormalization(),
@@ -145,7 +150,7 @@ class Decoder(tf.keras.layers.Layer):
         low_level_feat = self.norm(low_level_feat, training=training)
         low_level_feat = self.relu(low_level_feat)
 
-        x = tf.keras.layers.UpSampling2D(tuple(np.array(low_level_feat.numpy().shape[1:3]) / np.array(x.numpy().shape[1:3])), interpolation='bilinear').call(x)
+        x = self.upsampling(x)
         x = tf.concat([x, low_level_feat], axis=3)
         x = self.last_conv(x, training=training)
 
@@ -175,6 +180,7 @@ class Deeplabv3_plus(tf.keras.Model):
 
         self.aspp = ASPP(args.output_stride, self.args.resize)
         self.decoder = Decoder(num_classes)
+        self.upsampling = tf.keras.layers.UpSampling2D((4,4), interpolation='bilinear')
 
     def call(self, x, training=False):
         """
@@ -191,6 +197,6 @@ class Deeplabv3_plus(tf.keras.Model):
         x, low_level_feat = self.backbone(x, training=training)
         x = self.aspp(x, training=training)
         x = self.decoder(x, low_level_feat, training=training)
-        x = tf.keras.layers.UpSampling2D(tuple(np.array(self.args.resize) / np.array(x.numpy().shape[1:3])), interpolation='bilinear').call(x)
+        x = self.upsampling(x)
 
         return x

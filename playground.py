@@ -35,7 +35,9 @@ def check_duplicates(source_folder_name, destination_folder_name):
     else:
         print("NOT OK")
 
-def network_predict(iterations=20, pretrained_model=''):
+def network_predict(iterations=51, pretrained_model=''):
+    tf.enable_eager_execution(device_policy=tf.contrib.eager.DEVICE_PLACEMENT_SILENT)
+
     if not pretrained_model:
         raise NotImplementedError()
 
@@ -43,14 +45,15 @@ def network_predict(iterations=20, pretrained_model=''):
     args.cuda = False
     args.batch_size = 1
     args.inference = 1
+    args.execute_graph = 1
     args.pretrained_models_dir = pretrained_model
     args.num_downs = 8
     args.resize, args.size = (256,256), (256,256)
-    args.model = DEEPLAB_MOBILENET
+    args.model = DEEPLAB_50
     #args.refine_network = 1
     trainer = Trainer(args)
     mean_time = trainer.calculate_inference_speed(iterations)
     print('Mean time', mean_time)
 
 if __name__ == "__main__":
-    tensorflow_invert()
+    network_predict(pretrained_model='saved_models/deeplab_50')
