@@ -46,6 +46,10 @@ SYNC_BATCH_NORM = 'syncbn'
 KAIMING_INIT = 'glorot_normal'
 XAVIER_INIT = 'he_normal'
 
+# Lr scheduler policy
+LR_POLY_POLICY = 'poly'
+LR_NONE_POLICY = 'none'
+
 # Downsampling methods
 MAXPOOL = 'maxpool'
 STRIDECONV = 'strided'
@@ -56,3 +60,4 @@ VAL = 'val'
 TEST = 'test'
 TRAINVAL = 'trainval'
 VISUALIZATION = 'visualization'
+INFERENCE = 'inference'

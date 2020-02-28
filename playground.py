@@ -35,7 +35,7 @@ def check_duplicates(source_folder_name, destination_folder_name):
     else:
         print("NOT OK")
 
-def network_predict(iterations=51, pretrained_model=''):
+def network_predict(pretrained_model=''):
     tf.enable_eager_execution(device_policy=tf.contrib.eager.DEVICE_PLACEMENT_SILENT)
 
     if not pretrained_model:
@@ -50,10 +50,13 @@ def network_predict(iterations=51, pretrained_model=''):
     args.num_downs = 8
     args.resize, args.size = (256,256), (256,256)
     args.model = DEEPLAB_50
+    args.inference_dir = 'distorted_images'
+    args.debug = 0
+    args.results_dir = 'results_inference'
     #args.refine_network = 1
+
     trainer = Trainer(args)
-    mean_time = trainer.calculate_inference_speed(iterations)
-    print('Mean time', mean_time)
+    trainer.inference()
 
 if __name__ == "__main__":
     network_predict(pretrained_model='saved_models/deeplab_50')

@@ -3,6 +3,7 @@ import copy
 from tqdm import tqdm
 import math
 import time
+import matplotlib.pyplot as plt
 
 from util.general_functions import make_data_loader, get_model, get_loss, get_optimizer
 from util.summary import TensorboardSummary
@@ -27,36 +28,35 @@ class Trainer(object):
 
         if self.args.inference:
             self.model = self.summary.load_network(self.model)
-
-        if args.save_best_model:
-            self.best_model = copy.deepcopy(self.model)
-
-
-        if self.args.trainval:
+            self.inference_loader = make_data_loader(args, INFERENCE)
+        elif self.args.trainval:
             self.train_loader, self.test_loader = make_data_loader(args, TRAINVAL), make_data_loader(args, TEST)
         else:
             self.train_loader, self.test_loader = make_data_loader(args, TRAIN), make_data_loader(args, TEST)
 
-        self.criterion = get_loss(args.loss_type)
-        self.optimizer = get_optimizer(args)
-        self.global_step = tf.train.get_or_create_global_step()
+        if args.save_best_model:
+            self.best_model = copy.deepcopy(self.model)
+
+        if not self.args.inference:
+            self.criterion = get_loss(args.loss_type)
+            self.global_step = tf.train.get_or_create_global_step()
+            self.optimizer = get_optimizer(args, self.global_step, self.train_loader.length)
 
         if args.execute_graph:
             self.apply_gradients = tf.contrib.eager.defun(self.apply_gradients)
             self.model.call = tf.contrib.eager.defun(self.model.call)
 
-    def apply_gradients(self, optimizer : tf.train.Optimizer, gradients, variables, global_step):
+    def apply_gradients(self, gradients, variables, global_step):
         """
         Applies the gradients to the optimizer. This function exists so that tensorflow can define it as a graph function using tf.contrib.eager.defun
 
         Args:
-            optimizer (tf.train.Optimizer): optimizer
             gradients:
             variables:
             global_step:
         """
 
-        optimizer.apply_gradients(zip(gradients, variables), global_step=global_step)
+        self.optimizer.apply_gradients(zip(gradients, variables), global_step=global_step)
 
     def run_epoch(self, epoch, split=TRAIN):
         """
@@ -82,7 +82,7 @@ class Trainer(object):
                     loss = tf.add(loss, l2_reg)
 
                 gradients = tape.gradient(loss, self.model.trainable_variables)
-                self.apply_gradients(self.optimizer, gradients, self.model.trainable_variables, global_step=self.global_step)
+                self.apply_gradients(gradients, self.model.trainable_variables, global_step=self.global_step)
             else:
                 output = self.model(image)
                 loss = self.criterion(target, output)
@@ -107,20 +107,14 @@ class Trainer(object):
                     self.best_model = copy.deepcopy(self.model)
 
         self.summary.add_scalar(split + '/total_loss_epoch', total_loss, epoch)
-        print('\n=>Epoches %i, learning rate = %.4f, \previous best = %.4f' % (epoch, self.args.lr, self.best_loss))
+        print('\n=>Epoches %i, learning rate = %.6f, \previous best = %.4f' % (epoch, self.optimizer._lr_t.numpy(), self.best_loss))
 
-    def calculate_inference_speed(self, iterations):
+    def inference(self):
         """
-        Performs several forward passes through the network to compute the inference speed
-
-        Args:
-            iterations (int): number of forward passes
-
-        Returns:
-            int: mean inference speed
+        Performs inference
         """
 
-        loader = self.test_loader
+        loader = self.inference_loader
         bar = tqdm(loader)
         times = []
 
@@ -132,14 +126,13 @@ class Trainer(object):
             end = time.time()
             current_time = end - start
 
-            if i > 0:
-                print(current_time)
-                times.append(current_time)
+            self.summary.visualize_inference_image(image, output, split=INFERENCE)
 
-            if i>= iterations:
-                break
+            times.append(current_time)
 
-        return sum(times) / len(times)
+            #save images to disk?
+
+        print(sum(times) / len(times))
 
     def save_network(self):
         """Saves current model"""

@@ -113,6 +113,29 @@ class TensorboardSummary(object):
             tf.contrib.summary.image(split + '/Predicted label', self.image_grid(outputs), step=step)
             tf.contrib.summary.image(split + '/Groundtruth label', self.image_grid(targets), step=step)
 
+    def visualize_inference_image(self, images, outputs, split=INFERENCE):
+        """
+        Saves visualization imagse to tensorboard file
+
+        Args:
+            images (tf.Tensor): input images
+            outputs (tf.Tensor): output vector fields
+            targets (tf.Tensor): target vector fields
+            split (string):
+        """
+
+        step = self.get_step(split)
+
+        outputs, _ = get_flat_images(self.args.dataset, images, outputs, None)
+        outputs_without_pre = outputs[:, : int(self.args.resize[0] /2), : int(self.args.resize[0] /2), :]
+        outputs = tf.stack([tensor2im(output) for output in outputs[:, : int(self.args.resize[0] /2), : int(self.args.resize[0] /2), :]])
+
+        with self.writer.as_default(), tf.contrib.summary.always_record_summaries():
+            tf.contrib.summary.image(split + '/ZZ Image', self.image_grid(images), step=step)
+            tf.contrib.summary.image(split + '/Predicted label', self.image_grid(outputs), step=step)
+            tf.contrib.summary.image(split + '/Predicted Label no post', self.image_grid(outputs_without_pre), step=step)
+
+
     def get_step(self, split):
         """
         Returns the tensorboard visualization step of the current split

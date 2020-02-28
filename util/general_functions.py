@@ -92,21 +92,50 @@ def get_loss(loss_type):
 
     return loss
 
-def get_optimizer(args):
+def get_lr_scheduler(args, global_step, loader_length):
+    """
+    Builds and returns the lr scheduler
+
+    Args:
+        args (argparse): command line arguments
+        global_step (tf.Tensor): the global step tensor
+        loader_length (int): train loader length
+
+    Returns:
+        a function that computes the the decayed learning rate if in eager mode else the decayed learning rate
+
+    """
+
+    num_steps = int(args.epochs * loader_length / args.batch_size)
+
+    if args.lr_policy == LR_POLY_POLICY:
+        lr_scheduler = tf.train.polynomial_decay(args.lr, global_step, num_steps, args.lr / 10)
+    elif args.lr_policy == LR_NONE_POLICY:
+        return args.lr
+    else:
+        raise NotImplementedError
+
+    return lr_scheduler
+
+def get_optimizer(args, global_step, loader_length):
     """
     Builds and returns the optimizer.
 
     Args:
         args (argparse): command line arguments
+        global_step (tf.Tensor): the global step tensor
+        loader length (int): train loader length
 
     Returns:
         tf.keras.optimizers
     """
 
+    lr_scheduler = get_lr_scheduler(args, global_step, loader_length)
+
     if args.optim == SGD:
-        optimizer = tf.train.MomentumOptimizer(learning_rate=args.lr, momentum=args.momentum, use_nesterov=True)
+        optimizer = tf.train.MomentumOptimizer(learning_rate=lr_scheduler, momentum=args.momentum, use_nesterov=True)
     elif args.optim == ADAM:
-        optimizer = tf.train.AdamOptimizer(learning_rate=args.lr)
+        optimizer = tf.train.AdamOptimizer(learning_rate=lr_scheduler)
     elif args.optim == AMSGRAD:
         raise NotImplementedError
     else:
@@ -249,7 +278,7 @@ def get_flat_images(dataset, images, outputs, targets):
         pass
     elif dataset == DOCUNET_INVERTED:
         outputs = apply_transformation_to_image(images, outputs)
-        targets = apply_transformation_to_image(images, targets)
+        targets = apply_transformation_to_image(images, targets) if targets is not None else None
     else:
         pass
 
