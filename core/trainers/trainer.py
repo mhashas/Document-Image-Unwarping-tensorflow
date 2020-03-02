@@ -4,8 +4,9 @@ from tqdm import tqdm
 import math
 import time
 import matplotlib.pyplot as plt
+import os
 
-from util.general_functions import make_data_loader, get_model, get_loss, get_optimizer
+from util.general_functions import make_data_loader, get_model, get_loss, get_optimizer, get_flat_images, tensor2im
 from util.summary import TensorboardSummary
 
 from constants import *
@@ -29,6 +30,7 @@ class Trainer(object):
         if self.args.inference:
             self.model = self.summary.load_network(self.model)
             self.inference_loader = make_data_loader(args, INFERENCE)
+            self.test_loader = make_data_loader(args, TEST)
         elif self.args.trainval:
             self.train_loader, self.test_loader = make_data_loader(args, TRAINVAL), make_data_loader(args, TEST)
         else:
@@ -115,22 +117,31 @@ class Trainer(object):
         """
 
         loader = self.inference_loader
-        bar = tqdm(loader)
+        bar = tqdm(loader, total=loader.length)
         times = []
 
         for i, sample in enumerate(bar):
             image = sample[0]
+            target = None #sample[1] if len(sample) > 1 else None
 
             start = time.time()
             output = self.model(image)
             end = time.time()
             current_time = end - start
 
-            self.summary.visualize_inference_image(image, output, split=INFERENCE)
+            output, target = get_flat_images(self.args.dataset, image, output, target)
+            output = tf.stack([tensor2im(current) for current in output[:, : int(self.args.resize[0] / 2), : int(self.args.resize[0] / 2), :]])
+            target = tf.stack([tensor2im(current) for current in target[:, : int(self.args.resize[0] / 2), : int(self.args.resize[0] / 2), :]]) if target is not None else None
+            image = tf.image.resize(image, tf.convert_to_tensor([int(self.args.resize[0] / 2), int(self.args.resize[0] / 2)],dtype=tf.int32))
+
+            if not os.path.exists(os.path.join(self.args.inference_dir, 'results')): os.makedirs(os.path.join(self.args.inference_dir, 'results'))
+            plt.imsave(os.path.join(self.args.inference_dir, 'results', str(i)+'_og.jpg'), tf.squeeze(image).numpy())
+            plt.imsave(os.path.join(self.args.inference_dir, 'results', str(i)+'_unwarped.jpg'), tf.squeeze(output).numpy())
+
+            if target is not None:
+                plt.imsave(os.path.join(self.args.inference_dir, 'results', str(i) + '_target.jpg'), tf.squeeze(target).numpy())
 
             times.append(current_time)
-
-            #save images to disk?
 
         print(sum(times) / len(times))
 

@@ -45,7 +45,7 @@ class ParserOptions():
         parser.add_argument('--save_best_model', type=int, default=0, choices=[0,1], help='keep track of best model')
         parser.add_argument('--pretrained_models_dir', type=str, default='pretrained_models', help='root dir of the pretrained models location')
         parser.add_argument('--execute_graph', type=int, default=0, choices=[0,1])
-        parser.add_argument('--inference', type=int, default=1, choices=[0,1], help='if we should run the model in inference mode')
+        parser.add_argument('--inference', type=int, default=0, choices=[0,1], help='if we should run the model in inference mode')
 
         # deeplab specific
         parser.add_argument('--output_stride', type=int, default=16, help='network output stride (default: 16)')
