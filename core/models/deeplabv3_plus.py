@@ -173,14 +173,22 @@ class Deeplabv3_plus(tf.keras.Model):
 
         if args.model == DEEPLAB:
             self.backbone = ResNet101(args.output_stride, args.init_type)
+            if self.args.refine_network:
+                self.refine_backbone = ResNet101(args.output_stride, args.init_type)
         elif args.model == DEEPLAB_50:
             self.backbone = ResNet50(args.output_stride, args.init_type)
+            if self.args.refine_network:
+                self.refine_backbone = ResNet50(args.output_stride, args.init_type)
         else:
             raise NotImplementedError()
 
         self.aspp = ASPP(args.output_stride, self.args.resize)
         self.decoder = Decoder(num_classes)
         self.upsampling = tf.keras.layers.UpSampling2D((4,4), interpolation='bilinear')
+
+        if self.args.refine_network:
+            self.refine_aspp = ASPP(args.output_stride, self.args.resize)
+            self.refine_decoder = Decoder(num_classes)
 
     def call(self, x, training=False):
         """
@@ -193,10 +201,19 @@ class Deeplabv3_plus(tf.keras.Model):
         Returns:
             x (tf.Tensor): result of the forward pass
         """
+        input_image = x
 
         x, low_level_feat = self.backbone(x, training=training)
         x = self.aspp(x, training=training)
         x = self.decoder(x, low_level_feat, training=training)
         x = self.upsampling(x)
+
+        if self.args.refine_network:
+            refined_x = tf.concat((input_image, x), axis=3)
+            refined_x, low_level_feat_refine = self.refine_backbone(refined_x, training=training)
+            refined_x = self.refine_aspp(refined_x, training=training)
+            refined_x = self.refine_decoder(refined_x, low_level_feat_refine, training=training)
+            refined_x = self.upsampling(refined_x)
+            return x, refined_x
 
         return x

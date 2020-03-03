@@ -77,8 +77,15 @@ class Trainer(object):
 
             if split == TRAIN:
                 with tf.GradientTape() as tape:
-                    output = self.model(image, training=True)
+                    if self.args.refine_network:
+                        output, second_output = self.model(image, training=True)
+                    else:
+                        output = self.model(image, training=True)
                     loss = self.criterion(target, output)
+
+                    if self.args.refine_network:
+                        second_loss = self.criterion(target, second_output)
+                        loss = tf.add(loss, second_loss)
 
                     l2_reg = tf.add_n([tf.nn.l2_loss(v) for v in self.model.trainable_variables if 'bias' not in v.name]) * self.args.weight_decay
                     loss = tf.add(loss, l2_reg)

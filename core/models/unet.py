@@ -136,6 +136,10 @@ class UNet(tf.keras.Model):
         self.encoder = self.build_encoder(self.num_downs, self.ngf, down_type=args.down_type, init_type=args.init_type)
         self.decoder = self.build_decoder(self.num_downs, num_classes, self.ngf, init_type=args.init_type)
 
+        if self.refine_network:
+            self.refine_encoder = self.build_encoder(self.num_downs, self.ngf, down_type=args.down_type, init_type=args.init_type)
+            self.refine_decoder = self.build_decoder(self.num_downs, num_classes, self.ngf, init_type=args.init_type)
+
     def build_encoder(self, num_downs, ngf, down_type=STRIDECONV, init_type=KAIMING_INIT):
         """
         Constructs a UNet downsampling encoder, consisting of $num_downs UNetDownBlocks
@@ -188,20 +192,21 @@ class UNet(tf.keras.Model):
 
         return tf.keras.Sequential(layers)
 
-    def encoder_forward(self, x, training=False):
+    def encoder_forward(self, x, training=False, use_refine_network=False):
         """
         Computes a forward pass through the encoder network
 
         Args:
             x (tf.Tensor): input tensor
             training (bool): useful for layers such batch norm or dropout
+            use_refine_network (bool): determines which encoder we use
 
         Returns:
             tf.Tensor: output tensor
         """
 
         skip_connections = []
-        model = self.encoder
+        model = self.refine_encoder if use_refine_network else self.encoder
 
         for i, down in enumerate(model.layers):
             x = down(x, training=training)
@@ -213,25 +218,26 @@ class UNet(tf.keras.Model):
 
         return x, skip_connections
 
-    def decoder_forward(self, x, skip_connections, training=False):
+    def decoder_forward(self, x, skip_connections, training=False, use_refine_network=False):
         """
         Computes a forward pass through the encoder network
 
         Args:
-           x (tf.Tensor): input tensor
-           skip_connections (list): list of tf.Tensor of encoder skip connections
-           training (bool): useful for layers such batch norm or dropout
+            x (tf.Tensor): input tensor
+            skip_connections (list): list of tf.Tensor of encoder skip connections
+            training (bool): useful for layers such batch norm or dropout
+            use_refine_network (bool): determines which encoder we use
 
         Returns:
            tf.Tensor: output tensor
         """
 
-        model = self.decoder
+        model = self.refine_decoder if use_refine_network else self.decoder
 
         for i, up in enumerate(model.layers):
             if not up.innermost:
                 skip = skip_connections[-i]
-                out = tf.concat([skip, out], 3)
+                out = tf.concat([out, skip], 3)
                 out = up(out, training=training)
             else:
                 out = up(x, training=training)
@@ -252,5 +258,11 @@ class UNet(tf.keras.Model):
 
         output, skip_connections = self.encoder_forward(x, training=training)
         output = self.decoder_forward(output, skip_connections, training=training)
+
+        if self.refine_network:
+            refined_output = tf.concat((x, output), axis=3)
+            refined_output, refined_skip_connections = self.encoder_forward(refined_output, training=training, use_refine_network=True)
+            refined_output = self.decoder_forward(refined_output, refined_skip_connections, training=training, use_refine_network=True)
+            return output, refined_output
 
         return output
