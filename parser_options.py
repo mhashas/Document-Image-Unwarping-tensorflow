@@ -31,7 +31,7 @@ class ParserOptions():
 
         # training specific
         parser.add_argument('--dataset', type=str, default=DOCUNET_INVERTED, choices=[DOCUNET, DOCUNET_IM2IM, DOCUNET_INVERTED], help='dataset (default:' + DOCUNET + ')')
-        parser.add_argument('--dataset_dir', type=str, default=ADDRESS_DATASET, choices=[HAZMAT_DATASET, LABELS_DATASET, ADDRESS_DATASET], help='name of the dir in which the dataset is located')
+        parser.add_argument('--dataset_dir', type=str, default=ADDRESS_DATASET_v2, choices=[HAZMAT_DATASET, LABELS_DATASET, ADDRESS_DATASET, ADDRESS_DATASET_v2], help='name of the dir in which the dataset is located')
         parser.add_argument('--inference_dir', type=str, default='', help='location of inference images')
         parser.add_argument('--size', type=str, default='64,64', help='image size: h,w')
         parser.add_argument('--start_epoch', type=int, default=0, metavar='N', help='starting epoch')

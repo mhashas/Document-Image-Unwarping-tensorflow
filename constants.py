@@ -19,6 +19,7 @@ DOCUNET_IM2IM = 'docunet_im2im'
 HAZMAT_DATASET = 'hazmat_dataset'
 ADDRESS_DATASET = 'address_dataset'
 LABELS_DATASET = 'labels_dataset'
+ADDRESS_DATASET_v2 = 'address_dataset_v2'
 
 # loss constants
 DOCUNET_LOSS = 'docunet_loss'

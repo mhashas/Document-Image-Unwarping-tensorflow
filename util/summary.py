@@ -42,7 +42,7 @@ class TensorboardSummary(object):
         checkname = 'debug' if args.debug else ''
         checkname += args.model
         checkname += '_sc' if args.separable_conv else ''
-        checkname += '-refined' if args.refine_network else ''
+        checkname += '-r1' if args.refine_network else ''
         checkname += '-graph' if args.execute_graph else ''
 
         if 'deeplab' in args.model:
@@ -55,7 +55,6 @@ class TensorboardSummary(object):
             checkname += '-downs_' + str(args.num_downs) + '-ngf_' + str(args.ngf) + '-type_' + str(args.down_type)
 
         checkname += '-batch_' + str(args.batch_size)
-        checkname += '-loss_' + args.loss_type
         checkname += '-sloss_' if args.second_loss else ''
 
         if args.clip > 0:
@@ -67,7 +66,7 @@ class TensorboardSummary(object):
         checkname += '-trainval' if args.trainval else ''
 
         current_dir = os.path.dirname(__file__)
-        directory = os.path.join(current_dir, args.results_root, args.results_dir, args.dataset_dir, args.dataset, args.model, checkname)
+        directory = os.path.join(current_dir, args.results_root, args.results_dir, args.dataset_dir, args.model, checkname)
 
         runs = sorted(glob.glob(os.path.join(directory, 'experiment_*')))
         run_id = int(runs[-1].split('_')[-1]) + 1 if runs else 0
@@ -113,6 +112,8 @@ class TensorboardSummary(object):
             tf.contrib.summary.image(split + '/ZZ Image', self.image_grid(images), step=step)
             tf.contrib.summary.image(split + '/Predicted label', self.image_grid(outputs), step=step)
             tf.contrib.summary.image(split + '/Groundtruth label', self.image_grid(targets), step=step)
+
+        return images, outputs,  targets
 
     def get_step(self, split):
         """

@@ -69,6 +69,7 @@ class Trainer(object):
           split (string): current dataset split
         """
         total_loss = 0.0
+        total_ssim = 0.0
         loader = self.train_loader if split == TRAIN else self.test_loader
         bar = tqdm(loader, total=loader.length)
 
@@ -93,19 +94,27 @@ class Trainer(object):
                 gradients = tape.gradient(loss, self.model.trainable_variables)
                 self.apply_gradients(gradients, self.model.trainable_variables, global_step=self.global_step)
             else:
-                output = self.model(image)
+                if self.args.refine_network:
+                    output, second_output = self.model(image)
+                else:
+                    output = self.model(image)
                 loss = self.criterion(target, output)
+
+                if self.args.refine_network:
+                    second_loss = self.criterion(target, second_output)
+                    loss = tf.add(loss, second_loss)
 
                 l2_reg = tf.add_n([tf.nn.l2_loss(v) for v in self.model.trainable_variables if 'bias' not in v.name]) * self.args.weight_decay
                 loss = tf.add(loss, l2_reg)
 
             # Show 10 * 3 inference results each epoch
             if split != VISUALIZATION and i % (loader.length // 10) == 0:
-                self.summary.visualize_image(image, target, output, split=split)
+                image, target, output = self.summary.visualize_image(image, target, output, split=split)
             elif split == VISUALIZATION:
-                self.summary.visualize_image(image, target, output, split=split)
+                image, target, output = self.summary.visualize_image(image, target, output, split=split)
 
             total_loss += loss.numpy()
+            total_ssim += tf.image.ssim(output, target, max_val=1)
             bar.set_description(split + ' loss: %.3f' % (loss.numpy()))
 
         if split == TEST:
@@ -116,6 +125,7 @@ class Trainer(object):
                     self.best_model = copy.deepcopy(self.model)
 
         self.summary.add_scalar(split + '/total_loss_epoch', total_loss, epoch)
+        self.summary.add_scalar(split + '/sssim', total_ssim , epoch)
         print('\n=>Epoches %i, learning rate = %.6f, \previous best = %.4f' % (epoch, self.optimizer._lr_t.numpy(), self.best_loss))
 
     def inference(self):
@@ -123,13 +133,13 @@ class Trainer(object):
         Performs inference
         """
 
-        loader = self.inference_loader
+        loader = self.test_loader
         bar = tqdm(loader, total=loader.length)
         times = []
 
         for i, sample in enumerate(bar):
             image = sample[0]
-            target = None #sample[1] if len(sample) > 1 else None
+            target = sample[1] if len(sample) > 1 else None
 
             start = time.time()
             output = self.model(image)

@@ -106,7 +106,7 @@ def get_lr_scheduler(args, global_step, loader_length):
 
     """
 
-    num_steps = int(args.epochs * loader_length / args.batch_size)
+    num_steps = int(args.epochs * loader_length)
 
     if args.lr_policy == LR_POLY_POLICY:
         lr_scheduler = tf.train.polynomial_decay(args.lr, global_step, num_steps, args.lr / 10)
@@ -310,7 +310,8 @@ def print_training_info(args):
     """
 
     print("Built ", args.model)
-    print('Dataset', args.dataset)
+    print("Dataset dir ", args.dataset_dir)
+    print('Dataset ', args.dataset)
     print('Refine network', args.refine_network)
     print('Graph execution', args.execute_graph)
 
