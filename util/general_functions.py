@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from core.models.unet import UNet
 from core.models.deeplabv3_plus import Deeplabv3_plus
 from dataloader.docunet_inverted import InvertedDocunet
+from dataloader.docunet_im2im import Im2ImDocunet
 from util.docunet_loss import DocunetLoss
 from constants import *
 
@@ -23,7 +24,7 @@ def make_data_loader(args, split=TRAIN):
     elif args.dataset == DOCUNET_INVERTED:
         dataset = InvertedDocunet
     elif args.dataset == DOCUNET_IM2IM:
-        raise NotImplementedError()
+        dataset = Im2ImDocunet
     else:
         raise NotImplementedError
 

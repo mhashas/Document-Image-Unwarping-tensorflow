@@ -133,16 +133,19 @@ class Trainer(object):
         Performs inference
         """
 
-        loader = self.test_loader
+        loader = self.inference_loader #self.test_loader
         bar = tqdm(loader, total=loader.length)
         times = []
 
         for i, sample in enumerate(bar):
             image = sample[0]
-            target = sample[1] if len(sample) > 1 else None
+            target = None #sample[1]
 
             start = time.time()
-            output = self.model(image)
+            if self.args.refine_network:
+                first_output, output = self.model(image)
+            else:
+                output = self.model(image)
             end = time.time()
             current_time = end - start
 
@@ -151,12 +154,12 @@ class Trainer(object):
             target = tf.stack([tensor2im(current) for current in target[:, : int(self.args.resize[0] / 2), : int(self.args.resize[0] / 2), :]]) if target is not None else None
             image = tf.image.resize(image, tf.convert_to_tensor([int(self.args.resize[0] / 2), int(self.args.resize[0] / 2)],dtype=tf.int32))
 
-            if not os.path.exists(os.path.join(self.args.inference_dir, 'results')): os.makedirs(os.path.join(self.args.inference_dir, 'results'))
-            plt.imsave(os.path.join(self.args.inference_dir, 'results', str(i)+'_og.jpg'), tf.squeeze(image).numpy())
-            plt.imsave(os.path.join(self.args.inference_dir, 'results', str(i)+'_unwarped.jpg'), tf.squeeze(output).numpy())
+            if not os.path.exists(os.path.join('results_' + self.args.inference_dir)): os.makedirs(os.path.join('results_' + self.args.inference_dir))
+            plt.imsave(os.path.join('results_' + self.args.inference_dir, str(i) + '_og.jpg'), tf.squeeze(image).numpy())
+            plt.imsave(os.path.join('results_' + self.args.inference_dir, str(i) + '_unwarped.jpg'), tf.squeeze(output).numpy())
 
             if target is not None:
-                plt.imsave(os.path.join(self.args.inference_dir, 'results', str(i) + '_target.jpg'), tf.squeeze(target).numpy())
+                plt.imsave(os.path.join('results_' + self.args.inference_dir, str(i) + '_target.jpg'), tf.squeeze(target).numpy())
 
             times.append(current_time)
 
